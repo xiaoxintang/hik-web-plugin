@@ -161,7 +161,7 @@ ip、snapDir、layout、videoDir 中的一
 	/**窗口 id */
 	wndId?: number;
 }
-interface iWebControl {
+interface WebControl {
 	JS_StartService: {
 		(szType: iStartServiceSzType, options?: iStartServiceOptions): Promise<iPromiseRes>
 	};
@@ -190,7 +190,7 @@ interface iWebControl {
 		(szProtocal: "VideoWebPlugin:\/\/"): void
 	};
 	JS_RequestInterface: {
-		(funcName: iRequestFuncName, argument?:): any
+		(funcName: iRequestFuncName, argument?: iRequestArgument): any
 	};
 	/** */
 	JS_SetWindowControlCallback: {
@@ -221,3 +221,29 @@ interface iWebControl {
 		}
 	}
 }
+/**构造函数入参 */
+interface iWebControl {
+	/**div id */
+	szPluginContainer: string;
+	/**开始端口 建议15900*/
+	iServicePortStart: number;
+	/**结束端口 建议15909*/
+	iServicePortEnd: number;
+	/**用于 IE10 使用 ActiveX 的 clsid */
+	szClassId: "23BF3B0A-2C56-4D97-9C03-0CB103AA8F11";
+	/** 创建 WebControl 实例成功 */
+	cbConnectSuccess(): void;
+	/** 创建 WebControl 实例失败，可能没有安装插件*/
+	cbConnectError(): void;
+	/**
+	 * 插件使用过程中发生的断开与插件服务连接的回调
+	 *  bNormalClose = false 时表示异常断开
+	 * bNormalClose = true 时表示正常断开
+	 */
+	cbConnectClose(bNormalClose: boolean): void;
+}
+interface ioWebControlConstructor {
+	new(args: iWebControl): WebControl
+}
+
+declare var WebControl: ioWebControlConstructor
