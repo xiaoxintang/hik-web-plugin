@@ -2,7 +2,7 @@
 */
 type iStartServiceSzType = "window";
 
-type iStartServiceOptions = ".\/VideoPluginConnect.dll";
+type iStartServiceOptions = { dllPath: ".\/VideoPluginConnect.dll" };
 interface anyObj {
 	[k: string]: any
 }
@@ -42,16 +42,23 @@ type iPlayer = {
 	*/
 	ezvizDirect?: 0 | 1
 }
-type iRequestArgument = {
-	keyLenth: number;
-} |
-{
+/** 获取公钥的argument*/
+type iRA_getPubKey = {
+	keyLength: number;
+};
+/** 初始化的argument*/
+type iRA_init = {
 	/** API 网关提供的 appkey */
 	appkey: string;
 	/** API 网关提供的 secret*/
 	secret: string;
 	/** API 网关 IP 地址*/
 	ip: string;
+	/** 是否启用 HTTPS 协议与平台交互
+	 * 0:http
+	 * 1:https
+	*/
+	enableHTTPS?: 0 | 1;
 	port: number;
 	/** 播放模式（决定显示预览还是回放界面），
 	 * 0-预览 
@@ -107,59 +114,110 @@ ip、snapDir、layout、videoDir 中的一
 	*/
 	reconnectDuration?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 }
-	|
-	{
-		/**监控点编号 */
-		cameraIndexCode: string;
-		/** 主子码流标识
-		 * 0-主码流 1-子码流,默认0
-		*/
-		streamMode?: 0 | 1;
+/** 预览的argument*/
+type iRA_preview = {
+	/**监控点编号 */
+	cameraIndexCode: string;
+	/** 主子码流标识
+	 * 0-主码流 1-子码流,默认0
+	*/
+	streamMode?: 0 | 1;
 
-	} & iPlayer
-	|
-	{
-		/**监控点 UUID（监控点编号） */
-		cameraIndexCode: string;
-		/** 回放开始时间戳
-		 * 单位：秒，开始播放时间
-		*/
-		startTimeStamp: string;
-		/** 回放结束时间戳 单位秒*/
-		endTimeStamp: string;
-		/**录像存储位置
-		 * 0-中心存储 1-设备存储，
-		 * 使用默认值 0
-		 */
-		recordLocation?: 0 | 1;
+} & iPlayer
+/**回放的argument */
+type iRA_play = {
+	/**监控点 UUID（监控点编号） */
+	cameraIndexCode: string;
+	/** 回放开始时间戳
+	 * 单位：秒，开始播放时间
+	*/
+	startTimeStamp: string;
+	/** 回放结束时间戳 单位秒*/
+	endTimeStamp: string;
+	/**录像存储位置
+	 * 0-中心存储 1-设备存储，
+	 * 使用默认值 0
+	 */
+	recordLocation?: 0 | 1;
 
-	} & iPlayer
-	| {
-		layout: iLayout;
-	} |
-{
-	/**图片绝对路径名称，如“D:\test.jpg” */
-	name?: string;
-	/**播放窗口序号（有效值为 1~获取当前布局中返回的窗口数）*/
-	wndId?: number;
+} & iPlayer
+type iRA_setLayout = {
+	layout: iLayout;
 }
-	|
 /**画面字符叠加 */
-{
-	/**待叠加字符
-	 * 支持“\n”换行，不超过 512 个字符
-	 */
-	text: string;
-	/**相对播放窗口左上角的横坐标起点 */
-	x: number;
-	/**相对播放窗口左上角的纵坐标起点 */
-	y: number;
-	/**字体颜色
-	 * 默认白色
-	 */
-	color?: number;
-	/**窗口 id */
-	wndId?: number;
+type iRA_writeText =
+	{
+		/**待叠加字符
+		 * 支持“\n”换行，不超过 512 个字符
+		 */
+		text: string;
+		/**相对播放窗口左上角的横坐标起点 */
+		x: number;
+		/**相对播放窗口左上角的纵坐标起点 */
+		y: number;
+		/**字体颜色
+		 * 默认白色
+		 */
+		color?: number;
+		/**窗口 id */
+		wndId?: number;
+	}
+/**播放截图 */
+type iRA_playShot =
+	{
+		/**图片绝对路径名称，如“D:\test.jpg” */
+		name?: string;
+		/**播放窗口序号（有效值为 1~获取当前布局中返回的窗口数）*/
+		wndId?: number;
+	}
+/**JS_RequestInterface返回消息 */
+interface responseData {
+	errorCode: number;
+	errorModule: number;
+
+	uuid: string;
+	sequence: string;
+	/** 只需要关注这里*/
+	responseMsg: {
+		/**0成功，-1失败 */
+		code: 0 | -1;
+		/**错误描述，仅当 errorCode 非 0 时才有错误描述 */
+		msg: string;
+		/**返回的数据，如 RSA 公钥 */
+		data: string;
+	}
+}
+/**JS_SetWindowControlCallback 入参函数的参数 */
+interface cbResponseData {
+	uuid: string;
+	sequence: string;
+	/** 命令*/
+	cmd: string;
+	/**开发者关注点在这 */
+	responseMsg: {
+		/**
+		 * 1窗口选中消息
+		 * 2预览/回放播放消息
+		 * 3抓图结果消息
+		 * 4预览紧急录像/回放录像剪辑结果消息
+		 *5进入全屏/退出全屏消息
+		 */
+		type: 1 | 2 | 3 | 4 | 5;
+		msg: {
+			/**小窗口号 */
+			wndId: number;
+			/** 256-正在播放 512-空闲
+			 * 768-开始播放 769-播放失败 770播放异常 816-播放结束
+			 * -1-失败 0-成功
+			 * 1024-进入全屏 1025-退出全屏
+			*/
+			result: number;
+			/**监控点编号 */
+			cameraIndexcode: string;
+			/** 扩展参数 窗口选中消息无扩展参数*/
+			expand: string;
+		},
+	}
 }
 interface WebControl {
 	JS_StartService: {
@@ -169,16 +227,20 @@ interface WebControl {
 	JS_Disconnect: { (): Promise<iPromiseRes> };
 	/**调整插件窗口大小、位置接口 */
 	JS_Resize: { (iWidth: number, iHeight: number): void };
-	/**创建插件窗口 */
-	JS_CreateWnd: { (szId: string, iWidth: number, iHeight: number, options?: anyObj): Promise<iPromiseRes> };
+	/**
+	 *创建插件窗口
+	 * @param {string} szId 与指定的div的id也就是szPluginContainer相同
+	 * @param {number} iWidth 窗口宽
+	 * @param {number} iHeight 窗口高
+	 * @param {anyObj} [options] 可选参数
+	 * @returns {Promise<iPromiseRes>}
+	 * @memberof WebControl
+	 */
+	JS_CreateWnd(szId: string, iWidth: number, iHeight: number, options?: anyObj): Promise<iPromiseRes>;
 	/**扣除部分插件窗口 */
-	JS_CuttingPartWindow: {
-		(iLeft: number, iTop: number, iWidth: number, iHeight: number): void
-	};
+	JS_CuttingPartWindow(iLeft: number, iTop: number, iWidth: number, iHeight: number): void;
 	/** 扣除插件窗口还原*/
-	JS_RepairPartWindow: {
-		(iLeft: number, iTop: number, iWidth: number, iHeight: number): void
-	};
+	JS_RepairPartWindow(iLeft: number, iTop: number, iWidth: number, iHeight: number): void;
 	/**插件窗口隐藏 */
 	JS_HideWnd: emptyFun;
 	/** 插件窗口显示*/
@@ -186,40 +248,10 @@ interface WebControl {
 	/** 插件窗口销毁*/
 	JS_DestroyWnd: emptyFun;
 	/** 唤醒 WebControl.exe*/
-	JS_WakeUp: {
-		(szProtocal: "VideoWebPlugin:\/\/"): void
-	};
-	JS_RequestInterface: {
-		(funcName: iRequestFuncName, argument?: iRequestArgument): any
-	};
-	/** */
-	JS_SetWindowControlCallback: {
-		cbIntegrationCallBack: {
-			(oData: {
-				uuid: string;
-				sequence: string;
-				cmd: string;
-				responseMsg: {
-					/**
-					 * 1窗口选中消息
-					 * 2预览/回放播放消息
-					 * 3抓图结果消息
-					 * 4预览紧急录像/回放录像剪辑结果消息
-					 *5进入全屏/退出全屏消息
-					 */
-					type: 1 | 2 | 3 | 4 | 5;
-					msg: {
-						wndId: number;
-						/** 0x0100-正在播放 0x0200-空闲*/
-						result: number;
-						/**监控点编号 */
-						cameraIndexcode: string;
-						expand: string;
-					}
-				}
-			}): void
-		}
-	}
+	JS_WakeUp(szProtocal: "VideoWebPlugin:\/\/"): void;
+	JS_RequestInterface(args: { funcName: iRequestFuncName, argument?: string }): Promise<responseData>;
+	/** 设置回调*/
+	JS_SetWindowControlCallback(cbIntegrationCallBack: (oData: cbResponseData) => void): void
 }
 /**构造函数入参 */
 interface iWebControl {
@@ -241,9 +273,11 @@ interface iWebControl {
 	 * bNormalClose = true 时表示正常断开
 	 */
 	cbConnectClose(bNormalClose: boolean): void;
+
 }
-interface ioWebControlConstructor {
-	new(args: iWebControl): WebControl
+interface WebControlConstructor extends WebControl {
+	new(args: iWebControl): WebControl;
+	(args: iWebControl): WebControl;
 }
 
-declare var WebControl: ioWebControlConstructor
+declare var WebControl: WebControlConstructor
